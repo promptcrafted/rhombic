@@ -44,18 +44,29 @@ alternative. The cube was the default, and the default persisted.
 
 ## The Evidence
 
-This library provides the evidence. At every scale tested:
+This library provides the evidence across four independent domains.
+At every scale tested:
 
 - **30% shorter average paths.** Messages, memory accesses, and
   routing operations traverse 30% fewer hops on the FCC lattice.
 - **40% smaller diameter.** The worst-case path through the FCC
   lattice is 40% shorter than through the cubic lattice.
-- **2.4x algebraic connectivity.** The FCC lattice is 2.4 times
+- **2.4× algebraic connectivity.** The FCC lattice is 2.4 times
   harder to disconnect by removing edges — a mathematical measure
   of structural robustness.
+- **55% more flood fill reach** per hop. The routing advantage
+  translates directly to spatial propagation.
+- **5-10× lower signal reconstruction MSE.** Petersen-Middleton
+  (1962) confirmed empirically with topology-agnostic reconstruction.
+- **15-26 percentage points more embedding recall** at 1-hop. The
+  advantage survives the leap from Euclidean space to high-dimensional
+  embedding space.
 
 These ratios are scale-invariant. They hold at 100 nodes and at
 10,000 nodes because they derive from the geometry, not the sample.
+
+See the [full synthesis](../results/SYNTHESIS.md) for the complete
+argument across all four rungs.
 
 ## The Cost
 
@@ -122,10 +133,10 @@ This library is not a manifesto. It is a benchmark suite. The
 numbers are reproducible. The code is open. The geometry speaks
 for itself.
 
-The experimental ladder (see `EXPERIMENTAL_LADDER.md`) moves from
-abstract graph theory (Rung 1, complete) through spatial operations,
-signal processing, and context architecture. Each rung produces
-a publishable result. Each rung builds on the last.
+The experimental ladder (see `EXPERIMENTAL_LADDER.md`) is complete:
+graph theory, spatial operations, signal processing, and context
+architecture. Each rung produced a publishable result. Each built
+on the last. The synthesis is at `../results/SYNTHESIS.md`.
 
 The thesis is simple: the cube is not optimal. The evidence is
 here. The alternative is `pip install rhombic`.

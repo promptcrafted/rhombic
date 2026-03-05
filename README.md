@@ -119,6 +119,13 @@ per-neighbor weight dilution reduces the advantage at 1,000 nodes.
 
 [Full experimental ladder →](docs/EXPERIMENTAL_LADDER.md)
 
+### Synthesis
+
+The complete argument across all four rungs — cultural genealogy, empirical
+evidence, cybernetic interpretation, and practical recommendations.
+
+- [The Shape of the Cell: Why Computation Inherited the Wrong Geometry](results/SYNTHESIS.md)
+
 ## Philosophy
 
 - Reproducible by default. Every result has code that generates it.

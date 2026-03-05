@@ -107,16 +107,19 @@ dependent for distributed agreement.
 
 ---
 
-## Rung 5: Integration and Publication
+## Rung 5: Integration and Publication (complete)
 
-Synthesize findings across all rungs. Write up the complete argument:
+Synthesize findings across all rungs into a single publishable document:
 
 - The cultural genealogy (why the cube persists)
-- The empirical evidence (rungs 1-4)
+- The empirical evidence (rungs 1-4) with cross-domain pattern analysis
 - The cybernetic interpretation (Ashby, Beer, Bateson)
-- Practical recommendations for adoption
+- Practical recommendations for adoption (where to use FCC now, where to
+  proceed with caution, where to stay cubic)
+- Open questions and future work
 
-**Deliverable:** Technical report, blog posts, conference submission.
+**Deliverable:** `results/SYNTHESIS.md`
+**Status:** Complete.
 
 ---
 
