@@ -153,14 +153,23 @@ reciprocal (frequency-domain) lattice. Petersen and
 Middleton~\cite{petersen1962} established the general framework;
 the commonly cited result in the volume-rendering literature
 identifies the BCC lattice as the most efficient sampling geometry
-for isotropic bandlimits, with ${\sim}29.3\%$ greater Nyquist
-region volume than SC at matched sample
-density~\cite{theussl2001}. The FCC and BCC lattices are
-reciprocal duals---their roles reverse between real space and
-frequency space. Our Rung~3 benchmarks
-(Section~\ref{sec:signal}) directly measure FCC \emph{spatial}
-sampling with a topology-agnostic reconstructor, rather than
-deriving predictions from sampling theory.
+for isotropic bandlimits, requiring ${\sim}29.3\%$ fewer samples
+than SC at comparable fidelity~\cite{theussl2002orvs,theussl2001}.
+The FCC and BCC lattices are reciprocal duals---their roles
+reverse between real space and frequency space.
+
+Our experiments evaluate FCC in the \emph{spatial} domain because
+this work tests a single topology across all rungs (graph,
+spatial, signal, and embedding), and FCC is the natural spatial
+counterpart: it is the densest sphere packing, its Voronoi cell
+(the rhombic dodecahedron) provides the most isotropic
+tessellation among face-transitive polyhedra, and its 12-connected
+graph structure produces the routing and propagation advantages
+measured in Rungs~1--2. Rung~3 (Section~\ref{sec:signal})
+directly measures FCC spatial sampling with a topology-agnostic
+reconstructor, rather than deriving predictions from sampling
+theory. A BCC baseline is a natural next control for isolating
+sampling-theoretic contributions.
 
 \subsection{Lattice Data Structures}
 
@@ -236,7 +245,8 @@ trial per frequency--scale combination with fixed evaluation
 points. Embedding benchmarks (Rung~4) use a single trial with
 fixed cluster generation. All results are reproduced by
 \texttt{python~-m~rhombic.benchmark} at commit
-\texttt{v0.2.0}.\footnote{For benchmarks involving random
+\texttt{v0.1.1} (PyPI), commit
+\texttt{78af9f7}.\footnote{For benchmarks involving random
 evaluation points, the seed ensures bitwise reproducibility on the
 same platform. Cross-platform floating-point differences may
 produce minor variations.}
