@@ -156,6 +156,13 @@ evidence, cybernetic interpretation, and practical recommendations.
 - Cost is always reported alongside benefit.
 - Sparse results are data, not failure.
 
+## Ecosystem
+
+- [Interactive demo](https://huggingface.co/spaces/timotheospaul/rhombic) — try it in your browser
+- [The essay](https://timotheospaul.substack.com/p/the-shape-of-the-cell) — the thesis for humans
+- [PyPI](https://pypi.org/project/rhombic/) — `pip install rhombic`
+- [Full synthesis](results/SYNTHESIS.md) — the complete argument across all four rungs
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). We're looking for new topologies,
