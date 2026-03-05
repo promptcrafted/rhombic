@@ -9,6 +9,31 @@ description = "Lattice topology benchmarks: what happens when you replace the cu
 readme = "README.md"
 license = "MPL-2.0"
 requires-python = ">=3.10"
+authors = [{name = "Promptcrafted", email = "hello@promptcrafted.com"}]
+keywords = [
+    "lattice",
+    "topology",
+    "benchmark",
+    "FCC",
+    "rhombic-dodecahedron",
+    "graph-theory",
+    "signal-processing",
+    "embedding",
+    "spatial-computing",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+]
 dependencies = [
     "numpy>=1.24",
     "networkx>=3.0",
@@ -19,6 +44,12 @@ dependencies = [
 viz = ["matplotlib>=3.5"]
 dev = ["pytest>=7.0"]
 all = ["rhombic[viz]", "rhombic[dev]"]
+
+[project.urls]
+Homepage = "https://github.com/promptcrafted/rhombic"
+Repository = "https://github.com/promptcrafted/rhombic"
+Issues = "https://github.com/promptcrafted/rhombic/issues"
+Changelog = "https://github.com/promptcrafted/rhombic/blob/main/CHANGELOG.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

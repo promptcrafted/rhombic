@@ -1,5 +1,10 @@
 ![rhombic banner](assets/banner.png)
 
+[![PyPI](https://img.shields.io/pypi/v/rhombic)](https://pypi.org/project/rhombic/)
+[![CI](https://github.com/promptcrafted/rhombic/actions/workflows/ci.yml/badge.svg)](https://github.com/promptcrafted/rhombic/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/rhombic)](https://pypi.org/project/rhombic/)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+
 # rhombic
 
 > *The bottleneck is not the processor. It is the shape of the cell.*
@@ -118,6 +123,24 @@ per-neighbor weight dilution reduces the advantage at 1,000 nodes.
 - [What the numbers mean](results/rung-4/INTERPRETATION.md)
 
 [Full experimental ladder →](docs/EXPERIMENTAL_LADDER.md)
+
+### FCC Embedding Index (complete)
+
+A proof-of-concept ANN index that organizes high-dimensional embeddings on
+lattice topology. At matched node counts, the FCC index captures **+7 to +20
+percentage points** more true nearest neighbors at 1-hop than the cubic index.
+The only variable is the connectivity pattern.
+
+```python
+from rhombic.index import FCCIndex, CubicIndex, brute_force_knn
+
+fcc = FCCIndex.from_target_nodes(dim=384, target_nodes=500).build(embeddings)
+results = fcc.query(query_vector, k=10, hops=1)
+recall = fcc.recall_at_k(queries, ground_truth, k=10, hops=1)
+```
+
+- [Raw data and tables](results/index/RESULTS.md)
+- [What the numbers mean](results/index/INTERPRETATION.md)
 
 ### Synthesis
 
