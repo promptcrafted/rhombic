@@ -51,19 +51,26 @@ unambiguously. Query-dominated workloads see a density cost.
 
 ---
 
-## Rung 3: Signal Processing
+## Rung 3: Signal Processing (complete)
 
 The Petersen-Middleton theorem (1962) proves FCC sampling is optimal for
 bandlimited 3D signals — same samples, higher fidelity, or fewer samples,
 same fidelity. The world hasn't adopted it because the cube is the default.
 
-Benchmarks:
+Benchmarks (density-matched, topology-agnostic RBF reconstruction):
 
-- 3D signal reconstruction quality (FCC vs cubic sampling)
-- Aliasing resistance at matched sample counts
-- Fourier analysis on both lattice topologies
+- Frequency sweep from 10% to 100% of cubic Nyquist
+- Reconstruction quality (MSE, PSNR) at three scales (216, 512, 1000 samples)
+- Isotropy: directional bias in reconstruction error (6 directions)
+
+Results: FCC produces **5-10× lower MSE** in the mid-frequency range (10-60%
+Nyquist) and **5-20× more isotropic** reconstruction at all scales tested.
+Peak advantage: **+10 dB PSNR** at 1000 samples. The advantage grows with
+scale. Above Nyquist, both lattices alias and cubic's rectilinear alignment
+accidentally helps with separable signals.
 
 **Deliverable:** `rhombic/signal.py`, `results/rung-3/`
+**Status:** Complete.
 
 ---
 

@@ -21,7 +21,7 @@ See `docs/EXPERIMENTAL_LADDER.md` for the 5-rung experimental plan.
 | 0 | Lattice Library | Complete |
 | 1 | Graph Theory Benchmarks | Complete |
 | 2 | Spatial Operations | Complete |
-| 3 | Signal Processing | Planned |
+| 3 | Signal Processing | Complete |
 | 4 | Context Architecture | Planned |
 
 ## How to Add a New Rung

@@ -17,6 +17,8 @@ spatial operations, and signal processing.
 | Algebraic connectivity | **2.4× higher** | 125 – 8,000 nodes |
 | Flood fill reach | **55% more nodes** | 125 – 8,000 nodes |
 | NN query speed | **17% faster** | 125 – 8,000 nodes |
+| Signal reconstruction | **5-10× lower MSE** | 216 – 1,000 samples |
+| Reconstruction isotropy | **5-20× more uniform** | 216 – 1,000 samples |
 | Edge cost | ~2× more edges | (the price) |
 
 These ratios are scale-invariant. They hold at every size tested because
@@ -24,6 +26,7 @@ they derive from the geometry, not the sample.
 
 ![Graph theory dashboard](results/rung-1/dashboard.png)
 ![Spatial operations dashboard](results/rung-2/dashboard.png)
+![Signal processing dashboard](results/rung-3/dashboard.png)
 
 ## The Question
 
@@ -89,10 +92,16 @@ scales with density — 3-5× slower for sphere/box queries at 8,000 nodes.
 - [Raw data and tables](results/rung-2/RESULTS.md)
 - [What the numbers mean](results/rung-2/INTERPRETATION.md)
 
-### Rung 3: Signal Processing (planned)
+### Rung 3: Signal Processing (complete)
 
-FCC sampling is mathematically optimal for 3D signals (Petersen-Middleton,
-1962). The world hasn't adopted it because the cube is the default.
+Petersen-Middleton (1962) was right. FCC sampling produces **5-10× lower MSE**
+and **5-20× more isotropic** reconstruction than cubic sampling at matched
+sample counts. The advantage peaks in the mid-frequency range (10-60% of
+Nyquist) and grows with scale — from +6 dB at 216 samples to +10 dB at 1,000.
+Above Nyquist, both lattices alias and cubic's axis alignment accidentally helps.
+
+- [Raw data and tables](results/rung-3/RESULTS.md)
+- [What the numbers mean](results/rung-3/INTERPRETATION.md)
 
 ### Rung 4: Context Architecture (planned)
 
