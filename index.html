@@ -675,45 +675,45 @@ fiedler ~ <span class="kw">2.4x</span> cubic
       <div class="agent-line" style="animation-delay: 0.8s"><span class="tool">[calling lattice_compare]</span></div>
       <div class="agent-line" style="animation-delay: 1.4s"><span class="response">FCC: 30% shorter paths, 2.4x algebraic connectivity, 40% smaller diameter</span></div>
       <div class="agent-line" style="animation-delay: 2.2s"><span class="prompt">user:</span> What happens with structured weights from the Tarot corpus?</div>
-      <div class="agent-line" style="animation-delay: 2.8s"><span class="tool">[calling direction_weights]</span></div>
+      <div class="agent-line" style="animation-delay: 2.8s"><span class="tool">[calling fiedler_ratio]</span></div>
       <div class="agent-line" style="animation-delay: 3.4s"><span class="response">Direction-weighted Fiedler ratio: 6.1x (up from 2.4x uniform)</span></div>
     </div>
     <div class="tool-list">
       <div class="tool-item">
         <code>lattice_compare</code>
-        <p>Full lattice comparison at target scale</p>
+        <p>Compare SC/FCC lattices at any scale</p>
+      </div>
+      <div class="tool-item">
+        <code>fiedler_ratio</code>
+        <p>Weighted algebraic connectivity ratio</p>
       </div>
       <div class="tool-item">
         <code>direction_weights</code>
-        <p>Corpus-weighted algebraic connectivity</p>
+        <p>Direction-pair weighting (6.1x finding)</p>
       </div>
       <div class="tool-item">
         <code>spectral_analysis</code>
-        <p>Full Laplacian spectrum comparison</p>
+        <p>RD Laplacian spectrum under 4 distributions</p>
       </div>
       <div class="tool-item">
-        <code>corpus_stats</code>
-        <p>Continental Tarot value distributions</p>
+        <code>prime_vertex_map</code>
+        <p>Exhaustive prime-vertex optimization (p=2.5e-5)</p>
       </div>
       <div class="tool-item">
-        <code>prime_assignment</code>
-        <p>Optimal vertex placement by prime factors</p>
+        <code>permutation_control</code>
+        <p>Shuffled vs sorted permutation test</p>
       </div>
       <div class="tool-item">
-        <code>context_benchmark</code>
-        <p>Embedding recall and diffusion tests</p>
+        <code>explain_mechanism</code>
+        <p>Bottleneck resilience at 3 depth levels</p>
       </div>
       <div class="tool-item">
-        <code>signal_benchmark</code>
-        <p>Sampling reconstruction MSE/PSNR</p>
+        <code>visualize_rd</code>
+        <p>3D rhombic dodecahedron visualization</p>
       </div>
       <div class="tool-item">
-        <code>polyhedron_info</code>
-        <p>Rhombic dodecahedron geometry</p>
-      </div>
-      <div class="tool-item">
-        <code>full_suite</code>
-        <p>All benchmarks at all scales</p>
+        <code>visualize_amplification</code>
+        <p>Amplification gradient bar chart</p>
       </div>
     </div>
   </div>
