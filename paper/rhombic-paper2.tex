@@ -55,10 +55,9 @@ resilience: heterogeneous weights create near-disconnection
 bottlenecks that cubic lattices cannot route around but FCC lattices
 can. At single-cell scale, a targeted prime-vertex mapping achieves
 $p = 0.000025$ against an exhaustive null, while spectral analysis
-reveals that corpus-weight Fiedler suppression is universal across
-all tested 24-edge polytopes (percentiles 0.02\%--5.94\%), confirming
-the effect as a property of the weight distribution rather than the
-graph. All results are reproducible via \texttt{rhombic} v0.3.0
+reveals that corpus-weight Fiedler suppression occurs across all
+tested 24-edge polytopes (percentiles 0.02\%--5.94\%), suggesting the
+effect is driven by the weight distribution rather than the graph. All results are reproducible via \texttt{rhombic} v0.3.0
 (208~tests, \texttt{seed=42}).
 \end{abstract}
 
@@ -97,16 +96,14 @@ We use four edge-weight distributions throughout: \textbf{uniform}
 (all weights equal), \textbf{random} (uniform on $[0.1, 1.0]$),
 \textbf{power-law} (Zipf-like: $1/\text{rank}$), and
 \textbf{corpus}. The corpus distribution consists of 24 structured
-integers (range 18--1{,}296, mean 318.8, std 292.9) derived from a
-transliteration protocol (isopsephy/gematria) applied to
-inscriptions in a constructed sacred language. Eight primes
-(11, 17, 19, 23, 29, 31, 67, 89) are tracked as structural factors
-across the corpus values. The corpus is deeply associated with the
-rhombic dodecahedron through an independent research
-stream~\cite{bielec2026shape}; its analytical significance is
-documented separately. Here it serves as an empirical weight
-distribution with non-trivial internal arithmetic structure,
-evaluated alongside uniform, random, and power-law distributions.
+integers (range 18--1{,}296, mean 318.8, std 292.9) derived from a fixed transliteration protocol applied to a 24-element
+symbolic inscription set. Eight primes (11, 17, 19, 23, 29, 31, 67, 89)
+recur as factors across the corpus values, giving the distribution
+non-trivial internal arithmetic structure. The corpus's provenance
+and analytical significance are documented
+separately~\cite{bielec2026shape}. Here it serves as a high-variance,
+heavy-tailed stress test evaluated alongside uniform, random, and
+power-law distributions.
 
 All distributions are normalized to $[0, 1]$ for comparability.
 The corpus values, after normalization, exhibit high variance
@@ -125,11 +122,11 @@ weight distributions.
     resilience---FCC's 12-connected topology routes around
     near-disconnection bottlenecks that strangle the 6-connected
     cubic lattice.
-  \item \textbf{Universality:} Corpus-weight Fiedler suppression
-    occurs across all five tested 24-edge graph topologies
-    (percentiles 0.02\%--5.94\%), confirming the effect as a
-    property of the weight distribution, not the graph.
-  \item \textbf{Prime-vertex coherence:} A targeted prime-to-vertex
+  \item \textbf{Cross-topology consistency:} Corpus-weight Fiedler
+    suppression occurs across all five tested 24-edge graph topologies
+    (percentiles 0.02\%--5.94\%), suggesting the effect is driven
+    by the weight distribution rather than specific graph structure.
+  \item \textbf{Prime-vertex coherence (exploratory):} A targeted prime-to-vertex
     mapping on the rhombic dodecahedron achieves $p = 0.000025$
     against an exhaustive null of 40{,}320 permutations.
 \end{enumerate}
@@ -151,9 +148,13 @@ For weighted graphs, the weighted Laplacian
 $L_w = D_w - A_w$ generalizes naturally: $(L_w)_{ij} = -w_{ij}$
 for $i \neq j$, and $(L_w)_{ii} = \sum_j w_{ij}$, where $w_{ij}$
 is the weight of edge $(i,j)$~\cite{mohar1991, chung1997}. The
-weighted Fiedler value $\lambda_2(L_w)$ captures the minimum
-bisection cost of the weighted graph---the lightest cut that
-partitions it into two components.
+weighted Fiedler value $\lambda_2(L_w)$ is a spectral measure of
+bottleneck vulnerability. Cheeger-type inequalities relate
+$\lambda_2$ to the graph's conductance---the minimum ratio of cut
+weight to partition volume---but $\lambda_2$ is not equal to the
+minimum cut weight~\cite{mohar1991, chung1997}. Small $\lambda_2$
+indicates a low-conductance bottleneck; large $\lambda_2$ indicates
+that no cheap partition exists.
 
 When edge weights are heterogeneous, $\lambda_2(L_w)$ is dominated
 by the weakest cut in the graph. A topology with more alternative
@@ -228,6 +229,34 @@ Each group's mean becomes the weight for all edges in that
 direction pair. This preserves the corpus's variance structure
 while respecting the lattice's directional symmetry.
 
+\subsection{Ratio Conventions}
+
+All comparative metrics are reported as ratios with explicit direction.
+\textbf{Level metrics} (Fiedler value, path length) are reported as
+FCC/SC: values ${>}\,1$ indicate higher FCC connectivity; values
+${<}\,1$ indicate shorter FCC paths. \textbf{Speed metrics} (diffusion
+rounds, consensus rounds) are reported as SC/FCC speedup: values
+${>}\,1$ indicate FCC converges in fewer rounds. Each table caption
+restates its convention.
+
+\subsection{Dynamics Definitions}
+
+\textbf{Diffusion.} Information propagates via max-propagation with
+decay: at each round,
+$s_i(t{+}1) = \max\bigl(s_i(t),\; 0.9 \cdot \max_{j \in N(i)} s_j(t)\bigr)$.
+A single source node starts at $s_0 = 1.0$; all others at~$0$.
+Coverage is the fraction of nodes exceeding threshold~$0.01$.
+The reported metric is rounds to 50\% coverage.
+
+\textbf{Consensus.} All nodes start with i.i.d.\ uniform random states.
+At each round,
+$s_i(t{+}1) = \bigl(s_i(t) + \sum_{j \in N(i)} s_j(t)\bigr) / (\deg(i) + 1)$.
+Convergence is declared when
+$\max_i |s_i(t) - \bar{s}| < \epsilon$ with $\epsilon = 0.05$,
+up to 500 rounds. The denominator $(\deg(i) + 1)$ includes the
+node's own state, producing per-neighbor dilution at high
+degree---the mechanism behind the consensus inversion at scale~1{,}000.
+
 \subsection{Software and Reproducibility}
 
 All experiments use the \texttt{rhombic} library (Python 3.10+,
@@ -236,7 +265,10 @@ suite is reproduced via:
 \begin{verbatim}
   cd rhombic && python scripts/run_experiments.py
 \end{verbatim}
-All stochastic operations use \texttt{seed=42}. Hardware: Windows~11,
+All stochastic operations use \texttt{seed=42}. All $p$-values are
+computed as $p = (\text{number of null scores} \geq \text{observed}) /
+N_{\text{null}}$. When no null trial exceeds the observed value, we
+report $p \leq 1/N_{\text{null}}$. Hardware: Windows~11,
 Intel CPU, NVIDIA RTX 6000 Ada 48\,GB (unused---all benchmarks are
 CPU-bound). 208 tests verify library correctness. Source code and
 raw results are publicly available (see
@@ -255,8 +287,8 @@ shortest path ratio (FCC/SC, lower is better) at three scales.
 \begin{table}[H]
 \centering
 \caption{Edge-cycled weighted benchmarks. Fiedler ratio = FCC/SC
-  algebraic connectivity. Path ratio = FCC/SC average shortest path
-  (lower = FCC advantage). Scale = approximate node count.}
+  algebraic connectivity ($>$1 = FCC advantage). Path ratio = FCC/SC
+  average shortest path ($<$1 = FCC advantage).}
 \label{tab:exp1}
 \begin{tabular}{llrr}
 \toprule
@@ -293,9 +325,10 @@ at two scales.
 
 \begin{table}[H]
 \centering
-\caption{Direction-weighted tessellation. Fiedler ratio = FCC/SC.
-  Diffusion speedup = SC rounds / FCC rounds for 50\% coverage.
-  Consensus speedup = SC rounds / FCC rounds ($\epsilon = 0.05$).}
+\caption{Direction-weighted tessellation. Fiedler ratio = FCC/SC
+  ($>$1 = FCC advantage). Diffusion speedup = SC/FCC rounds to 50\%
+  coverage ($>$1 = FCC faster). Consensus speedup = SC/FCC rounds to
+  $\epsilon = 0.05$ ($>$1 = FCC faster).}
 \label{tab:exp5}
 \begin{tabular}{llrrr}
 \toprule
@@ -332,6 +365,16 @@ either paper.
   achieves $6.1\times$.}
 \label{fig:amplification}
 \end{figure}
+
+\paragraph{Permutation control.} To confirm that the amplification is
+driven by alignment of sorted weights with direction pairs---rather than
+merely by having 6 bins versus 3---we ran 1{,}000 trials in which the 24
+corpus values were randomly permuted before the sorted-bucketing step at
+scale 1{,}000. The mean shuffled Fiedler ratio was $2.68 \pm 0.68$,
+compared to $6.11$ for the sorted assignment ($p = 0.001$). The sorted
+assignment concentrates extreme values into coherent directional channels,
+maximizing the bottleneck contrast that FCC's redundant connectivity
+exploits.
 
 \subsection{The Amplification Mechanism}
 
@@ -394,9 +437,9 @@ iterations each.
 \toprule
 Distribution & Optimal TV & Random Mean TV & Improvement & $p$-value \\
 \midrule
-random    & 8.71 & 17.73 $\pm$ 1.22 & 50.9\% & ${<}\,0.0001$ \\
-power\_law & 6.89 & 10.08 $\pm$ 0.50 & 31.7\% & ${<}\,0.0001$ \\
-corpus    & 8.12 & 13.05 $\pm$ 0.74 & 37.8\% & ${<}\,0.0001$ \\
+random    & 8.71 & 17.73 $\pm$ 1.22 & 50.9\% & ${\leq}\,10^{-4}$ \\
+power\_law & 6.89 & 10.08 $\pm$ 0.50 & 31.7\% & ${\leq}\,10^{-4}$ \\
+corpus    & 8.12 & 13.05 $\pm$ 0.74 & 37.8\% & ${\leq}\,10^{-4}$ \\
 \midrule
 \multicolumn{5}{l}{\textit{Control: random 24-edge graph}} \\
 corpus    & 6.80 & --- & --- & --- \\
@@ -476,7 +519,11 @@ values carry maximal information for the RD.
 \label{fig:spectra}
 \end{figure}
 
-\subsection{Experiment 6: Targeted Prime-Vertex Mapping}
+\subsection{Experiment 6: Targeted Prime-Vertex Mapping (Exploratory)}
+
+This experiment is exploratory: it searches a derived optimization
+landscape and should be interpreted as structured data analysis rather
+than hypothesis-confirmatory testing.
 
 Given the TV-optimal edge assignment from Experiment~2, we
 exhaustively search all $8! = 40{,}320$ mappings of the 8 tracked
@@ -545,13 +592,13 @@ Random $G(14,24)$ & 14 & 0.6997 & 0.0529 & 5.94\% & 14 / 14 \\
 \end{tabular}
 \end{table}
 
-Corpus Fiedler suppression is universal across all tested 24-edge
+Corpus Fiedler suppression occurs across all five tested 24-edge
 graphs (Figure~\ref{fig:polytopes}). The cuboctahedron shows even
 stronger suppression (0.02\%) than the RD (0.08\%). High-symmetry
 graphs (RD, cuboctahedron, $K_{4,6}$) show maximal degeneracy
-breaking under corpus weights. This confirms that the spectral
-effects are a property of the corpus weight distribution---high
-variance and heavy tail creating bottlenecks---rather than a
+breaking under corpus weights. This suggests that the spectral
+effects are driven primarily by the corpus weight distribution---high
+variance and heavy tail creating bottlenecks---rather than by a
 specific interaction with RD topology.
 
 \begin{figure}[H]
@@ -579,8 +626,8 @@ RD is the only graph in this comparison that produces both.
 The two lattice-scale experiments establish a clear mechanism.
 Heterogeneous weights create bottlenecks: edges or direction pairs
 with low weight that constrain flow through the lattice. The
-weighted Fiedler value $\lambda_2(L_w)$ is determined by the
-minimum bisection cost---the lightest cut.
+weighted Fiedler value $\lambda_2(L_w)$ is governed by the graph's
+worst bottleneck---the cut direction with the lowest conductance.
 
 In the SC lattice, each of 3 direction pairs accounts for a third
 of all connectivity. A weak direction pair eliminates a third of
@@ -748,7 +795,8 @@ A three-phase adoption path mirrors FCC crystal nucleation:
     amplification under structured weights.
 \end{enumerate}
 
-The consulting pitch: ``keep your cube, add six bridges.''
+In engineering terms: keep the existing cubic infrastructure and
+add six diagonal bridge connections per node.
 
 \subsection{BCC Comparison}
 
@@ -822,7 +870,11 @@ characterize real systems, it is amplified.
 
 \paragraph{Availability.}
 Source code: \url{https://github.com/promptcrafted/rhombic}.\\
-Package: \url{https://pypi.org/project/rhombic/} (v0.3.0, 208 tests).\\
+Package: \url{https://pypi.org/project/rhombic/} (v0.3.0, 208 tests,
+PyPI trusted publishing provenance binding to commit
+\texttt{c4d2845db20457a91df2065212a5814e12d22e38}).\\
+Reproduction: \texttt{pip install rhombic==0.3.0 \&\& python
+scripts/run\_experiments.py} (all stochastic operations seeded with 42).\\
 Interactive demo: \url{https://huggingface.co/spaces/timotheospaul/rhombic}.
 
 % ===================================================================
