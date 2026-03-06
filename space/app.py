@@ -1,10 +1,11 @@
 """
 rhombic — Interactive demo of FCC vs Cubic lattice topology.
 
-Three tabs:
+Four tabs:
   1. The Numbers — headline results + live Rung 1 benchmark
   2. Embedding Recall — FCC vs Cubic ANN index comparison
   3. The Thesis — condensed argument + links
+  4. Weighted Extensions — direction-weighted Fiedler amplification (Paper 2)
 """
 
 import time
@@ -472,6 +473,208 @@ The geometry is the argument. The numbers are the evidence.*
 """
 
 
+# ── Tab 4: Weighted Extensions ─────────────────────────────────────
+
+# 24 trump values in deck order (verified by tools/isopsephy.py)
+CORPUS_VALUES = [
+    1296, 202, 405, 463, 94, 64, 448, 771, 342, 153, 435, 136,
+    386, 72, 55, 29, 78, 133, 18, 309, 240, 346, 134, 252,
+]
+
+WEIGHTED_HEADER = """
+### Direction-Weighted Fiedler Amplification (Paper 2)
+
+Under uniform weights, FCC is **2.3x** more algebraically connected than cubic.
+Under direction-based corpus weighting, the ratio jumps to **6.1x**. The
+mechanism is bottleneck resilience: FCC routes around suppressed edges that
+strangle cubic lattices.
+
+Choose a scale and weight distribution, then click **Run** to compute the
+weighted Laplacian Fiedler eigenvalues for both topologies.
+"""
+
+
+def classify_cubic_edges(positions, edges):
+    """Classify cubic edges into 3 direction pairs (x, y, z)."""
+    dirs = {0: [], 1: [], 2: []}
+    for idx, (u, v) in enumerate(edges):
+        diff = positions[v] - positions[u]
+        axis = int(np.argmax(np.abs(diff)))
+        dirs[axis].append(idx)
+    return dirs
+
+
+def classify_fcc_edges(positions, edges):
+    """Classify FCC edges into 6 direction pairs."""
+    canonical = {
+        (1, 1, 0): 0, (-1, -1, 0): 0,
+        (1, -1, 0): 1, (-1, 1, 0): 1,
+        (1, 0, 1): 2, (-1, 0, -1): 2,
+        (1, 0, -1): 3, (-1, 0, 1): 3,
+        (0, 1, 1): 4, (0, -1, -1): 4,
+        (0, 1, -1): 5, (0, -1, 1): 5,
+    }
+    dirs = {i: [] for i in range(6)}
+    # Detect half-lattice-parameter from minimum edge length
+    diffs = positions[np.array([e[1] for e in edges])] - positions[np.array([e[0] for e in edges])]
+    half_a = np.min(np.linalg.norm(diffs, axis=1)) / np.sqrt(2)
+    for idx, (u, v) in enumerate(edges):
+        diff = positions[v] - positions[u]
+        rounded = tuple(int(round(d / half_a)) for d in diff)
+        pair_idx = canonical.get(rounded)
+        if pair_idx is not None:
+            dirs[pair_idx].append(idx)
+    return dirs
+
+
+def compute_direction_weights(values, n_directions):
+    """Sort values, split into n_directions buckets, return mean per bucket."""
+    s = sorted(values)
+    per = len(s) // n_directions
+    result = []
+    for i in range(n_directions):
+        start = i * per
+        end = start + per if i < n_directions - 1 else len(s)
+        result.append(float(np.mean(s[start:end])))
+    return result
+
+
+def weighted_laplacian_fiedler(positions, edges, edge_weights):
+    """Compute the Fiedler eigenvalue of the weighted Laplacian."""
+    n = len(positions)
+    L = np.zeros((n, n), dtype=np.float64)
+    for idx, (u, v) in enumerate(edges):
+        w = edge_weights[idx]
+        L[u, v] -= w
+        L[v, u] -= w
+        L[u, u] += w
+        L[v, v] += w
+    eigs = np.linalg.eigvalsh(L)
+    eigs.sort()
+    return float(eigs[1])
+
+
+def run_weighted_benchmark(target_nodes, dist_name):
+    """Compare direction-weighted Fiedler values for cubic vs FCC."""
+    target_nodes = int(target_nodes)
+    t0 = time.time()
+
+    # Build lattices
+    n_cubic = max(2, round(target_nodes ** (1/3)))
+    n_fcc = max(2, round((target_nodes / 4) ** (1/3)))
+    c_pos, c_edges = build_cubic(n_cubic)
+    f_pos, f_edges = build_fcc(n_fcc)
+
+    # Classify edges by direction
+    c_dirs = classify_cubic_edges(np.array(c_pos), [(u, v) for u, v in c_edges])
+    f_dirs = classify_fcc_edges(np.array(f_pos), [(u, v) for u, v in f_edges])
+
+    # Compute direction weights from corpus
+    corpus = CORPUS_VALUES
+    rng = np.random.default_rng(42)
+
+    if dist_name == "Uniform":
+        c_dir_weights = [1.0] * 3
+        f_dir_weights = [1.0] * 6
+    elif dist_name == "Random":
+        c_dir_weights = rng.uniform(0.1, 1.0, size=3).tolist()
+        f_dir_weights = rng.uniform(0.1, 1.0, size=6).tolist()
+    else:  # Corpus
+        c_dir_weights = compute_direction_weights(corpus, 3)
+        f_dir_weights = compute_direction_weights(corpus, 6)
+
+    # Normalize weights to [0.1, 1.0] range for non-uniform
+    if dist_name != "Uniform":
+        for wlist in [c_dir_weights, f_dir_weights]:
+            mn, mx = min(wlist), max(wlist)
+            rng_val = mx - mn if mx > mn else 1.0
+            for i in range(len(wlist)):
+                wlist[i] = 0.1 + 0.9 * (wlist[i] - mn) / rng_val
+
+    # Assign per-edge weights based on direction
+    c_edge_weights = [1.0] * len(c_edges)
+    for d_idx, edge_indices in c_dirs.items():
+        for ei in edge_indices:
+            c_edge_weights[ei] = c_dir_weights[d_idx]
+
+    f_edge_weights = [1.0] * len(f_edges)
+    for d_idx, edge_indices in f_dirs.items():
+        for ei in edge_indices:
+            f_edge_weights[ei] = f_dir_weights[d_idx]
+
+    # Compute Fiedler values
+    c_pos_arr = np.array(c_pos)
+    f_pos_arr = np.array(f_pos)
+    c_fiedler = weighted_laplacian_fiedler(c_pos_arr, c_edges, c_edge_weights)
+    f_fiedler = weighted_laplacian_fiedler(f_pos_arr, f_edges, f_edge_weights)
+
+    ratio = f_fiedler / c_fiedler if c_fiedler > 1e-10 else float('inf')
+    elapsed = time.time() - t0
+
+    # Bar chart
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name='Cubic', x=['Fiedler value'], y=[c_fiedler],
+        marker_color=CUBIC_COLOR,
+        text=[f"{c_fiedler:.4f}"], textposition='auto',
+        width=0.35,
+    ))
+    fig.add_trace(go.Bar(
+        name='FCC', x=['Fiedler value'], y=[f_fiedler],
+        marker_color=FCC_COLOR,
+        text=[f"{f_fiedler:.4f}"], textposition='auto',
+        width=0.35,
+    ))
+    fig.update_layout(
+        barmode='group',
+        title=f"Weighted Fiedler — {dist_name} weights at ~{target_nodes} nodes",
+        yaxis_title="Algebraic connectivity (λ₂)",
+        template="plotly_white",
+        height=400,
+        margin=dict(t=50, b=40),
+    )
+
+    # Direction weight visualization
+    n_dirs = max(len(c_dir_weights), len(f_dir_weights))
+    fig_weights = go.Figure()
+    fig_weights.add_trace(go.Bar(
+        name='Cubic (3 pairs)',
+        x=[f"Dir {i}" for i in range(3)],
+        y=c_dir_weights,
+        marker_color=CUBIC_COLOR,
+        text=[f"{w:.3f}" for w in c_dir_weights],
+        textposition='auto',
+    ))
+    fig_weights.add_trace(go.Bar(
+        name='FCC (6 pairs)',
+        x=[f"Dir {i}" for i in range(6)],
+        y=f_dir_weights,
+        marker_color=FCC_COLOR,
+        text=[f"{w:.3f}" for w in f_dir_weights],
+        textposition='auto',
+    ))
+    fig_weights.update_layout(
+        barmode='group',
+        title="Direction pair weights",
+        yaxis_title="Weight",
+        template="plotly_white",
+        height=300,
+        margin=dict(t=50, b=40),
+    )
+
+    summary = (
+        f"## FCC / Cubic Fiedler ratio: **{ratio:.1f}x**\n\n"
+        f"| | Cubic ({len(c_pos)} nodes) | FCC ({len(f_pos)} nodes) |\n"
+        f"|---|---|---|\n"
+        f"| Fiedler value | {c_fiedler:.4f} | {f_fiedler:.4f} |\n"
+        f"| Direction pairs | 3 | 6 |\n"
+        f"| Edges | {len(c_edges)} | {len(f_edges)} |\n\n"
+        f"*{dist_name} weights. Computed in {elapsed:.2f}s.*"
+    )
+
+    return summary, fig, fig_weights
+
+
 # ── Build the Gradio app ───────────────────────────────────────────
 
 with gr.Blocks(
@@ -545,6 +748,32 @@ The only variable is the connectivity pattern: 12 neighbors (FCC) vs 6 (cubic).
         # ── Tab 3: The Thesis ──
         with gr.TabItem("The Thesis"):
             gr.Markdown(THESIS_TEXT)
+
+        # ── Tab 4: Weighted Extensions ──
+        with gr.TabItem("Weighted Extensions"):
+            gr.Markdown(WEIGHTED_HEADER)
+
+            with gr.Row():
+                w_slider = gr.Slider(
+                    minimum=27, maximum=1000, value=125, step=1,
+                    label="Target node count",
+                )
+                w_dist = gr.Dropdown(
+                    choices=["Uniform", "Random", "Corpus"],
+                    value="Corpus",
+                    label="Weight distribution",
+                )
+                w_btn = gr.Button("Run", variant="primary")
+
+            w_summary = gr.Markdown()
+            w_fiedler_plot = gr.Plot()
+            w_weights_plot = gr.Plot()
+
+            w_btn.click(
+                fn=run_weighted_benchmark,
+                inputs=[w_slider, w_dist],
+                outputs=[w_summary, w_fiedler_plot, w_weights_plot],
+            )
 
 
 if __name__ == "__main__":
