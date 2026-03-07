@@ -172,28 +172,13 @@ separately~\cite{bielec2026shape}. Here it serves as a high-variance,
 heavy-tailed stress test evaluated alongside uniform, random, and
 power-law distributions.
 
-The 24 corpus values are listed in Table~\ref{tab:corpus}. After
-min-max normalization to $[0,1]$, the distribution exhibits high
-variance (coefficient of variation $\approx 0.92$) and a heavy
+After min-max normalization to $[0,1]$, the distribution exhibits
+high variance (coefficient of variation $\approx 0.92$) and a heavy
 right tail (skewness $\approx 1.8$), properties shared with many
-real-world weight distributions.
-
-\begin{table}[H]
-\centering
-\caption{The 24 corpus values (unnormalized). Range 18--1{,}296,
-  mean 318.8, std 292.9, CV 0.92. Each value is an integer derived
-  from a fixed transliteration protocol applied to a symbolic
-  inscription. Eight primes (11, 17, 19, 23, 29, 31, 67, 89)
-  recur as factors across the set.}
-\label{tab:corpus}
-\begin{tabular}{rrrrrrrr}
-\toprule
-18 & 29 & 55 & 64 & 72 & 78 & 94 & 133 \\
-133 & 134 & 136 & 153 & 202 & 240 & 252 & 309 \\
-342 & 346 & 386 & 435 & 448 & 463 & 771 & 1296 \\
-\bottomrule
-\end{tabular}
-\end{table}
+real-world weight distributions. All lattice-scale findings
+(amplification, bottleneck resilience) can be independently verified
+using the random and power-law distributions, which show the same
+amplification gradient at lower magnitude.
 
 \subsection{Contributions}
 
