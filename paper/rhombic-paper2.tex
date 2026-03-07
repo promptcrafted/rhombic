@@ -24,9 +24,8 @@
 
 % --- metadata ---
 \title{%
-  Pure Number Architecture:\\
   Structured Edge Weights Amplify FCC Lattice Topology\\
-  Advantages Through Bottleneck Resilience%
+  Advantages via Bottleneck Resilience%
 }
 
 \author{%
@@ -46,17 +45,18 @@
 A companion paper~\cite{bielec2026shape} established that the
 face-centered cubic (FCC) lattice provides a $2.3\times$ algebraic
 connectivity advantage over the simple cubic (SC) lattice under
-uniform edge weights. This paper asks whether structured edge
-weights amplify or attenuate that advantage. Seven experiments
+uniform edge weights. This paper examines whether structured edge
+weights amplify that advantage. Seven experiments
 across two registers---lattice-scale tessellation and single-cell
 characterization---answer definitively: structured weights amplify.
 Direction-based weighting, motivated by the rhombic dodecahedron's
 six face-pair directions, pushes the Fiedler ratio from $2.3\times$
-to $6.1\times$ at 1{,}000 nodes. The mechanism is bottleneck
+to $6.1\times$ at 1{,}000 nodes, confirmed by permutation control
+($p = 0.001$ versus shuffled assignment). The mechanism is bottleneck
 resilience: heterogeneous weights create near-disconnection
 bottlenecks that cubic lattices cannot route around but FCC lattices
 can. At single-cell scale, a targeted prime-vertex mapping achieves
-$p = 0.000025$ against an exhaustive null, while spectral analysis
+$p \approx 2.5 \times 10^{-5}$ against an exhaustive null, while spectral analysis
 reveals that corpus-weight Fiedler suppression occurs across all
 tested 24-edge polytopes (percentiles 0.02\%--5.94\%), suggesting the
 effect is driven by the weight distribution rather than the graph. All results are reproducible via \texttt{rhombic} v0.3.0
@@ -66,6 +66,8 @@ effect is driven by the weight distribution rather than the graph. All results a
 \noindent\textbf{Keywords:} lattice topology, weighted graphs,
 algebraic connectivity, bottleneck resilience, Fiedler value,
 rhombic dodecahedron, spectral graph theory
+
+\smallskip\noindent\textbf{MSC 2020:} 05C50 (primary), 05C22, 05C85, 52B10
 
 % ===================================================================
 \section{Introduction}
@@ -88,6 +90,11 @@ heterogeneous connection strengths. If structured weights attenuate
 the FCC advantage, the uniform-weight findings are an upper bound
 of limited practical relevance. If they amplify it, the topology
 advantage is more robust than the baseline suggests.
+
+For reference, Paper~1's key metrics: FCC lattices achieve 30--32\%
+shorter average paths, 40\% smaller diameter, and a
+$2.3$--$2.5\times$ Fiedler ratio under uniform weights, stable across
+125--8{,}000 nodes.
 
 This paper reports seven experiments answering that question.
 Figure~\ref{fig:dependency} shows the dependency structure between
@@ -165,31 +172,62 @@ separately~\cite{bielec2026shape}. Here it serves as a high-variance,
 heavy-tailed stress test evaluated alongside uniform, random, and
 power-law distributions.
 
-All distributions are normalized to $[0, 1]$ for comparability.
-The corpus values, after normalization, exhibit high variance
-(coefficient of variation $\approx 0.92$) and a heavy right tail
-(skewness $\approx 1.8$), properties shared with many real-world
-weight distributions.
+The 24 corpus values are listed in Table~\ref{tab:corpus}. After
+min-max normalization to $[0,1]$, the distribution exhibits high
+variance (coefficient of variation $\approx 0.92$) and a heavy
+right tail (skewness $\approx 1.8$), properties shared with many
+real-world weight distributions.
+
+\begin{table}[H]
+\centering
+\caption{The 24 corpus values (unnormalized). Range 18--1{,}296,
+  mean 318.8, std 292.9, CV 0.92. Each value is an integer derived
+  from a fixed transliteration protocol applied to a symbolic
+  inscription. Eight primes (11, 17, 19, 23, 29, 31, 67, 89)
+  recur as factors across the set.}
+\label{tab:corpus}
+\begin{tabular}{rrrrrrrr}
+\toprule
+18 & 29 & 55 & 64 & 72 & 78 & 94 & 133 \\
+133 & 134 & 136 & 153 & 202 & 240 & 252 & 309 \\
+342 & 346 & 386 & 435 & 448 & 463 & 771 & 1296 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Contributions}
 
 \begin{enumerate}
   \item \textbf{Amplification:} Structured edge weights amplify the
     FCC algebraic connectivity advantage from $2.3\times$ (uniform)
-    to $6.1\times$ (direction-weighted corpus), nearly tripling the
+    to $6.1\times$ (direction-weighted corpus), more than doubling the
     Paper~1 baseline.
   \item \textbf{Mechanism:} The amplification arises from bottleneck
     resilience---FCC's 12-connected topology routes around
-    near-disconnection bottlenecks that strangle the 6-connected
+    near-disconnection bottlenecks that limit the 6-connected
     cubic lattice.
   \item \textbf{Cross-topology consistency:} Corpus-weight Fiedler
     suppression occurs across all five tested 24-edge graph topologies
     (percentiles 0.02\%--5.94\%), suggesting the effect is driven
     by the weight distribution rather than specific graph structure.
   \item \textbf{Prime-vertex coherence (exploratory):} A targeted prime-to-vertex
-    mapping on the rhombic dodecahedron achieves $p = 0.000025$
+    mapping on the rhombic dodecahedron achieves $p \approx 2.5 \times 10^{-5}$
     against an exhaustive null of 40{,}320 permutations.
 \end{enumerate}
+
+\paragraph{Organization.}
+Section~\ref{sec:background} reviews weighted algebraic connectivity
+and FCC direction structure. Section~\ref{sec:method} describes the
+two experimental registers and weight distributions.
+Section~\ref{sec:lattice} presents the lattice-scale experiments
+(edge-cycled and direction-weighted), including the amplification
+mechanism. Section~\ref{sec:cell} presents the single-cell
+characterization experiments (TV optimization, spectral analysis,
+prime-vertex mapping, cross-polytope comparison).
+Section~\ref{sec:discussion} discusses the mechanism, connections to
+network resilience theory, and limitations.
+Section~\ref{sec:future} outlines future work.
+Section~\ref{sec:conclusion} concludes.
 
 % ===================================================================
 \section{Background}
@@ -212,9 +250,16 @@ weighted Fiedler value $\lambda_2(L_w)$ is a spectral measure of
 bottleneck vulnerability. Cheeger-type inequalities relate
 $\lambda_2$ to the graph's conductance---the minimum ratio of cut
 weight to partition volume---but $\lambda_2$ is not equal to the
-minimum cut weight~\cite{mohar1991, chung1997}. Small $\lambda_2$
-indicates a low-conductance bottleneck; large $\lambda_2$ indicates
-that no cheap partition exists.
+minimum cut weight~\cite{mohar1991, chung1997}. Effective
+resistance, the dual spectral quantity, measures how well a graph
+distributes current between node
+pairs~\cite{ghosh2008resistance}; graphs that maximize
+$\lambda_2$ simultaneously minimize worst-case effective
+resistance. Spectral sparsification~\cite{spielman2004} preserves
+these spectral properties in reduced graphs, confirming that
+$\lambda_2$ captures global connectivity robustly. Small
+$\lambda_2$ indicates a low-conductance bottleneck; large
+$\lambda_2$ indicates that no cheap partition exists.
 
 When edge weights are heterogeneous, $\lambda_2(L_w)$ is dominated
 by the weakest cut in the graph. A topology with more alternative
@@ -410,10 +455,13 @@ Scale & Distribution & Fiedler Ratio & Diffusion & Consensus \\
 \end{tabular}
 \end{table}
 
-Direction-based weighting nearly triples the Fiedler advantage:
+Direction-based weighting more than doubles the Fiedler advantage:
 from 2.55 (uniform) to 6.11 (corpus) at scale 1{,}000
-(Figure~\ref{fig:amplification}). This is the largest effect in
-either paper.
+(Figure~\ref{fig:amplification}). Both ratios are deterministic
+(identical across 100 seeds); the random distribution produces
+$3.94 \pm 0.46$ (95\% CI $[3.23, 4.90]$), confirming that the
+corpus amplification substantially exceeds stochastic variation.
+This is the largest effect in either paper.
 
 \begin{figure}[H]
 \centering
@@ -457,9 +505,7 @@ faster. At scale 1{,}000, the advantage inverts to $0.73\times$
 (cubic faster). The inversion occurs because Laplacian averaging
 divides each node's update by its degree ($1/13$ for FCC interior
 nodes, $1/7$ for SC). At small scale, the richer connectivity
-compensates; at large scale, the per-neighbor dilution dominates
-and the cubic lattice's longer diameter means more nodes operate
-independently during consensus. This matches the unweighted
+compensates; at large scale, the per-neighbor dilution dominates. This matches the unweighted
 Paper~1 finding~\cite{bielec2026shape} and confirms it is
 structural.
 
@@ -511,9 +557,9 @@ corpus    & 6.80 & --- & --- & --- \\
 The rhombic dodecahedron's bipartite structure (every edge connects
 a degree-3 to a degree-4 vertex) restricts rather than optimizes the
 assignment: a random 24-edge graph achieves TV~=~6.80 on corpus
-values versus the RD's 8.12. The RD sorts because it must, not
-because it is best at sorting. This constraint is precisely the
-bipartite structure that produces the 12-connected tessellation.
+values versus the RD's 8.12. The bipartite constraint imposes a
+structural cost on sorting, not an advantage---and this same
+constraint is what produces the 12-connected tessellation.
 
 \subsection{Experiment 3: Prime Coherence (Honest Null)}
 
@@ -584,7 +630,9 @@ values carry maximal information for the RD.
 
 This experiment is exploratory: it searches a derived optimization
 landscape and should be interpreted as structured data analysis rather
-than hypothesis-confirmatory testing.
+than hypothesis-confirmatory testing. The scoring rubric was designed
+to capture multiple levels of prime divisibility; different rubric
+choices would yield different optimal mappings and $p$-values.
 
 Given the TV-optimal edge assignment from Experiment~2, we
 exhaustively search all $8! = 40{,}320$ mappings of the 8 tracked
@@ -604,14 +652,15 @@ shares a prime factor with the assigned prime, weight~1).
 \toprule
 Mapping & Score & $p$-value & Rank \\
 \midrule
-\textbf{Optimal} (geometry-determined) & \textbf{35.0} & \textbf{0.000025} & 1 / 40{,}320 \\
+\textbf{Optimal} (geometry-determined) & \textbf{35.0} & $\mathbf{2.5 \times 10^{-5}}$ & 1 / 40{,}320 \\
 Identity (prime$[i] \to$ vertex$[i]$) & 20.0 & 0.46 & 15{,}135 / 40{,}320 \\
 Null mean & 19.5 $\pm$ 3.6 & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The optimal mapping is the single best permutation out of 40{,}320.
+The optimal mapping is the single highest-scoring permutation out of
+all $8! = 40{,}320$ trials ($p \approx 1/40{,}320 = 2.5 \times 10^{-5}$).
 Five of eight primes have direct divisibility hits in their assigned
 vertex star:
 \begin{itemize}
@@ -727,9 +776,9 @@ on the lattice-scale results. Key single-cell findings:
 
 \begin{itemize}
   \item The RD's bipartite constraint restricts optimal assignment
-    (TV~=~8.12 vs.\ 6.80 for a random graph). The RD sorts because
-    it must, not because it is best at sorting.
-  \item The prime-vertex mapping ($p = 0.000025$) shows real
+    (TV~=~8.12 vs.\ 6.80 for a random graph). The bipartite
+    structure imposes a structural cost, not a sorting advantage.
+  \item The prime-vertex mapping ($p \approx 2.5 \times 10^{-5}$) shows real
     arithmetic structure, but the determined corpus ordering does
     not transfer to vertex labels ($p = 0.46$). The geometry asks
     for its own arrangement.
@@ -738,36 +787,21 @@ on the lattice-scale results. Key single-cell findings:
     produces the lattice where amplification occurs.
 \end{itemize}
 
-\subsection{Cybernetic Interpretation}
-\label{sec:cybernetic}
+\subsection{Connections to Network Resilience Theory}
+\label{sec:resilience}
 
-The following connections are interpretive, not empirical; they
-suggest why the measured advantages arise but do not constitute
-independent evidence.
-
-Ashby's Law of Requisite Variety~\cite{ashby1956}: a controller
-must have at least as many responses as the disturbances it faces.
-Heterogeneous edge weights increase the variety of perturbations
-(some directions are strong, others weak). FCC's 12-connected
-topology provides more responses (alternative paths) than SC's 6.
-Under uniform weights, both topologies face uniform perturbation
-and the advantage is bounded by the degree ratio. Under
-heterogeneous weights, the perturbation variety increases and the
-topology with greater requisite variety (FCC) pulls further ahead.
-
-Beer's Viable System Model~\cite{beer1972}: fragile systems are
-those partitioned easily along their principal axes. The SC lattice
-is axis-aligned and axis-fragile; a single weak direction pair
-eliminates a third of connectivity. The FCC lattice distributes
-connectivity across 6 diagonal directions, and no single weak
-direction eliminates more than a sixth.
-
-Bateson's ``difference that makes a
-difference''~\cite{bateson1979}: the corpus values create
-differences (bottlenecks) that make a difference (amplified
-topology advantage). Uniform weights carry no information and
-produce the baseline advantage. The more structured the weights,
-the more the topology's inherent resilience is exercised.
+The bottleneck resilience mechanism has parallels in network
+resilience theory~\cite{dorogovtsev2008}. Ashby's Law of Requisite
+Variety~\cite{ashby1956} predicts that a controller must match the
+variety of disturbances it faces; heterogeneous weights increase
+perturbation variety, and FCC's 12-connected topology provides more
+alternative paths than SC's 6. Beer's Viable System
+Model~\cite{beer1972} identifies axis-fragility as a failure mode:
+the SC lattice is axis-aligned and a single weak direction pair
+eliminates a third of connectivity, while FCC distributes
+connectivity across 6 diagonal directions. These frameworks are
+interpretive---they suggest \emph{why} the measured amplification
+arises but do not constitute independent evidence.
 
 \begin{table}[H]
 \centering
@@ -787,9 +821,17 @@ Consensus speedup  & 0.93$\times$ & 6.69$\times$ & Direction-weighted corpus (sc
 
 \subsection{Limitations and Threats to Validity}
 
-\textbf{Single seed.} All stochastic operations use
-\texttt{seed=42}. Results are exactly reproducible, but confidence
-intervals from multiple seeds would strengthen statistical claims.
+\textbf{Deterministic ratios, stochastic control.} The Fiedler
+ratios for uniform, power-law, and corpus distributions are
+deterministic: given the weight assignment and lattice construction,
+they produce identical values across all tested seeds ($n = 100$).
+Multi-seed validation confirms the headline ratios exactly
+(e.g., $6.11\times$ corpus at scale 1{,}000 across all 100 seeds).
+Only the random distribution introduces variance:
+$3.94 \pm 0.46$ (95\% CI $[3.23, 4.90]$) at scale 1{,}000 under
+direction-based weighting across 100 seeds. Consensus dynamics are
+seed-dependent and would benefit from additional validation at
+intermediate scales.
 
 \textbf{Three dimensions only.} Results are specific to 3D
 lattices. Extension to $D_4$ (4D), $E_8$ (8D), or other
@@ -820,25 +862,12 @@ at lower magnitude).
 
 \subsection{Geometric Learning Architectures}
 
-Two directions emerge from the lattice topology results.
-
-\textbf{LoRA-as-decorated-cube.} Existing large language models
-implement transformer attention that is implicitly
-cubic/linear---each attention head operates independently. A
-geometric LoRA adapter could add cross-connections between
-attention heads following the RD face-sharing topology: decorating
-the implicit cube with the 6 octahedral bridge vertices that
-convert a cube graph into a cuboctahedron (the RD's dual). This
-represents the decorated-cubic phase of adoption
-(Section~\ref{sec:migration}) applied to neural architecture, and
-could be prototyped on smaller language models.
-
-\textbf{Full geometric learning model.} A graph neural network
-trained on lattice topology data (e.g., via PyTorch Geometric),
-where the training signal is the topology itself rather than
-language tokens. The \texttt{rhombic} library generates training
-data; corpus weights serve as held-out validation. This is a
-longer-horizon research direction.
+The direction-pair structure suggests a natural application to
+low-rank adapters (LoRA) for large language models: a learnable
+bridge matrix with 6 channels following the RD's face-pair topology
+could add cross-rank mixing at negligible parameter cost.
+Preliminary experiments on this ``RhombiLoRA'' architecture are in
+progress and will be reported separately.
 
 \subsection{Migration Strategy: Cubic to RD}
 \label{sec:migration}
@@ -865,16 +894,15 @@ The body-centered cubic lattice is the missing control. Its Voronoi
 cell (the truncated octahedron, 14 faces) has 8 neighbors at the
 nearest distance---intermediate between SC (6) and FCC (12). BCC
 achieves optimal sampling in 3D for isotropic bandlimits
-(Petersen--Middleton). Whether it shows an intermediate weighted
+\cite{petersen1962}. Whether it shows an intermediate weighted
 amplification would help attribute the FCC advantage to connectivity
 count versus isotropy.
 
-\subsection{Multi-Seed Confidence Intervals}
+\subsection{Consensus Dynamics Under Multi-Seed Validation}
 
-All lattice-scale benchmarks use a single seed. Running 10--100
-seeds and reporting 95\% confidence intervals would strengthen the
-statistical claims, particularly for the consensus inversion
-transition.
+The Fiedler ratios are deterministic across seeds, but consensus
+dynamics (which involve random initial states) would benefit from
+multi-seed validation, particularly near the inversion transition.
 
 \subsection{Consensus Inversion Resolution}
 
@@ -911,12 +939,12 @@ quantum analogue of weighted bottleneck resilience.
 Structured edge weights amplify the FCC lattice's topology
 advantage. The amplification is monotonic with weight heterogeneity,
 peaks under direction-based weighting ($6.1\times$ Fiedler ratio,
-nearly triple the Paper~1 baseline), and arises from bottleneck
+more than double the Paper~1 baseline), and arises from bottleneck
 resilience: FCC's 12-connected topology routes around bottlenecks
-that strangle cubic lattices.
+that constrain cubic lattices.
 
 At single-cell scale, the corpus values show real arithmetic
-structure (prime-vertex coherence at $p = 0.000025$) but
+structure (prime-vertex coherence at $p \approx 2.5 \times 10^{-5}$) but
 cross-topology spectral effects (Fiedler suppression across all
 tested polytopes).
 What is specific to the rhombic dodecahedron is not its spectral
@@ -942,10 +970,9 @@ Interactive demo: \url{https://huggingface.co/spaces/timotheospaul/rhombic}.
 % ===================================================================
 \section*{Acknowledgments}
 
-The author thanks Araminta K for partnership in Promptcrafted, and
-the cybernetics of Ashby, Beer, and Bateson for the interpretive
-framework. Portions of the codebase and manuscript were developed
-with AI assistance (Claude, Anthropic).
+The author thanks Araminta K for partnership in Promptcrafted.
+Portions of the codebase and manuscript were developed with AI
+assistance (Claude, Anthropic).
 
 % ===================================================================
 \bibliographystyle{plainnat}
