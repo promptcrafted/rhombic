@@ -6,25 +6,106 @@ The Falco isopsephy corpus as structured data for graph experiments.
 
 The paper presents these as "a set of 24 integers with non-trivial internal
 arithmetic structure, derived from an independent analytical domain."
+
+PROPRIETARY: The specific corpus values are intellectual property of
+Promptcrafted LLC. They are loaded from a local data file that is not
+distributed with the public package. All non-corpus functionality
+(uniform, random, power-law distributions; prime utilities; direction
+weighting) works without the corpus values.
 """
 
 from __future__ import annotations
 
+import json
 import math
 import numpy as np
 from dataclasses import dataclass
+from pathlib import Path
 
 
-# ── Raw corpus data ───────────────────────────────────────────────────
+# ── Corpus availability ──────────────────────────────────────────────
 
-# Standard isopsephic values, verified by tools/isopsephy.py compute
-TRUMP_VALUES: dict[int | str, int] = {
-    0: 1296, 1: 202, 2: 405, 3: 463, 4: 94,
-    5: 64, 6: 448, 7: 771, 8: 342, 9: 153,
-    10: 435, 11: 136, 12: 386, 13: 72, 14: 55,
-    15: 29, "T": 78, 16: 133, 17: 18, 18: 309,
-    19: 240, 20: 346, 21: 134, "G": 252,
-}
+
+class CorpusUnavailable(Exception):
+    """Raised when corpus values are required but not available."""
+    pass
+
+
+_DATA_FILE = Path(__file__).parent / "data" / "corpus_private.json"
+_corpus_loaded = False
+_TRUMP_VALUES: dict[int | str, int] = {}
+_TRUMP_INSCRIPTIONS: dict[int | str, str] = {}
+_NAMES_OF_POWER: dict[str, int] = {}
+
+
+def _load_corpus() -> bool:
+    """Attempt to load corpus from private data file. Returns True if successful."""
+    global _corpus_loaded, _TRUMP_VALUES, _TRUMP_INSCRIPTIONS, _NAMES_OF_POWER
+
+    if _corpus_loaded:
+        return True
+
+    if not _DATA_FILE.exists():
+        return False
+
+    try:
+        with open(_DATA_FILE) as f:
+            data = json.load(f)
+
+        # Convert string keys back to int/str
+        for k, v in data["trump_values"].items():
+            key = int(k) if k not in ("T", "G") else k
+            _TRUMP_VALUES[key] = v
+
+        for k, v in data["trump_inscriptions"].items():
+            key = int(k) if k not in ("T", "G") else k
+            _TRUMP_INSCRIPTIONS[key] = v
+
+        _NAMES_OF_POWER.update(data["names_of_power"])
+        _corpus_loaded = True
+        return True
+    except (json.JSONDecodeError, KeyError):
+        return False
+
+
+def _require_corpus() -> None:
+    """Raise CorpusUnavailable if corpus values are not loaded."""
+    if not _load_corpus():
+        raise CorpusUnavailable(
+            "Corpus values are proprietary (Promptcrafted LLC). "
+            "Use uniform, random, or power_law distributions instead. "
+            "See: https://github.com/promptcrafted/rhombic"
+        )
+
+
+def corpus_available() -> bool:
+    """Check whether corpus values are available without raising."""
+    return _load_corpus()
+
+
+# ── Public accessors (require corpus) ────────────────────────────────
+
+
+def trump_values() -> dict[int | str, int]:
+    """The 24 trump values keyed by card position."""
+    _require_corpus()
+    return dict(_TRUMP_VALUES)
+
+
+def trump_inscriptions() -> dict[int | str, str]:
+    """The 24 trump inscriptions keyed by card position."""
+    _require_corpus()
+    return dict(_TRUMP_INSCRIPTIONS)
+
+
+def names_of_power() -> dict[str, int]:
+    """The 14 Names of Power and their values."""
+    _require_corpus()
+    return dict(_NAMES_OF_POWER)
+
+
+# ── Non-proprietary data ─────────────────────────────────────────────
+
 
 TRUMP_NAMES: dict[int | str, str] = {
     0: "Fool", 1: "Magician", 2: "Priestess", 3: "Empress",
@@ -35,38 +116,21 @@ TRUMP_NAMES: dict[int | str, str] = {
     19: "Sun", 20: "Judgment", 21: "World", "G": "Grail",
 }
 
-TRUMP_INSCRIPTIONS: dict[int | str, str] = {
-    0: "UAT ASETEDOJ", 1: "BRAL ALEBAL", 2: "ALBAL MAT",
-    3: "NIALMATAL", 4: "BANIAL", 5: "ALBAL", 6: "BARILTE",
-    7: "ULITAL", 8: "MAAT", 9: "COMJL", 10: "ULE",
-    11: "ADONAJ", 12: "TELAMJ", 13: "VAJNE", 14: "VELIBAA",
-    15: "DAJIBAA", "T": "BELIAL", 16: "DONACE", 17: "GEJ",
-    18: "ECAT", 19: "ORO", 20: "TALEJ", 21: "GEAREIJ",
-    "G": "RIRAJLA",
-}
-
-NAMES_OF_POWER: dict[str, int] = {
-    "SAMMA": 282, "TETRAGRAMMATHON": 1319, "VADUSFADAHM": 671,
-    "EOROS": 445, "LIOTHIL": 458, "MENON": 215, "AGAFEST": 516,
-    "SADAS": 406, "DESURIORIS": 1099, "SADAM": 246, "TASUMER": 1046,
-    "ISIS": 420, "SET": 505, "OSIRIS": 590,
-}
-
 TRACKED_PRIMES: list[int] = [67, 23, 29, 17, 19, 31, 11, 89]
 
-# Canonical edge ordering: deck order (0-21, T, G)
 CANONICAL_EDGE_ORDER: list[int | str] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     "T", 16, 17, 18, 19, 20, 21, "G",
 ]
 
 
-# ── Functions ─────────────────────────────────────────────────────────
+# ── Functions ────────────────────────────────────────────────────────
 
 
 def edge_values() -> list[int]:
     """The 24 trump values in canonical edge order."""
-    return [TRUMP_VALUES[k] for k in CANONICAL_EDGE_ORDER]
+    _require_corpus()
+    return [_TRUMP_VALUES[k] for k in CANONICAL_EDGE_ORDER]
 
 
 def prime_factors(value: int) -> list[int]:
@@ -128,33 +192,37 @@ def weight_distributions(seed: int = 42) -> dict[str, list[float]]:
 
     Returns
     -------
-    dict with keys: 'uniform', 'random', 'power_law', 'corpus'
+    dict with keys: 'uniform', 'random', 'power_law', and optionally 'corpus'
     Each value is a list of 24 floats.
+
+    The corpus distribution requires proprietary data. If unavailable,
+    only 3 distributions are returned.
     """
     rng = np.random.default_rng(seed)
     n = 24
-    corpus = edge_values()
-
-    # Normalize all distributions to [0, 1] range for comparability
-    corpus_arr = np.array(corpus, dtype=np.float64)
-    corpus_norm = (corpus_arr - corpus_arr.min()) / max(corpus_arr.max() - corpus_arr.min(), 1)
 
     uniform = [1.0] * n
 
     random_raw = rng.uniform(0.1, 1.0, size=n)
     random_norm = random_raw.tolist()
 
-    # Power-law: Zipf-like distribution
     ranks = np.arange(1, n + 1, dtype=np.float64)
     power_raw = 1.0 / ranks
     power_norm = (power_raw / power_raw.max()).tolist()
 
-    return {
+    result = {
         'uniform': uniform,
         'random': random_norm,
         'power_law': power_norm,
-        'corpus': corpus_norm.tolist(),
     }
+
+    if corpus_available():
+        corpus = edge_values()
+        corpus_arr = np.array(corpus, dtype=np.float64)
+        corpus_norm = (corpus_arr - corpus_arr.min()) / max(corpus_arr.max() - corpus_arr.min(), 1)
+        result['corpus'] = corpus_norm.tolist()
+
+    return result
 
 
 @dataclass
@@ -166,11 +234,12 @@ class CorpusStats:
     mean_value: float
     std_value: float
     n_distinct_primes: int
-    tracked_prime_coverage: dict[int, int]  # prime -> count of values divisible
+    tracked_prime_coverage: dict[int, int]
 
 
 def corpus_stats() -> CorpusStats:
     """Compute summary statistics of the 24 trump values."""
+    _require_corpus()
     values = edge_values()
     arr = np.array(values)
 
