@@ -805,7 +805,7 @@ M ∈ R^{6×6}  (36 params)
 Init: M = I   (recovers standard LoRA)
 ```
 
-📄 [Paper draft](https://github.com/promptcrafted/rhombic/blob/main/paper/rhombic-paper3.tex) |
+📄 [Paper](https://github.com/promptcrafted/rhombic/blob/main/paper/rhombic-paper3.tex) |
 📊 [All results](https://github.com/promptcrafted/rhombic/tree/main/results) |
 🔬 [Bridge matrices (.npy)](https://github.com/promptcrafted/rhombic/tree/main/results/fingerprints)
             """)
