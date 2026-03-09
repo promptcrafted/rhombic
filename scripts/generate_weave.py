@@ -1,22 +1,22 @@
 """
 generate_weave.py — Tessitura Binary Matrix Visualization
 
-Renders a 25x8 binary matrix as a woven-textile pattern using the
-8-Law Weave palette.  Each column = one of the 8 tracked primes (in
-LAW_PRIMES order); each row = one card value.  Filled cells glow with
-the prime's Law color; empty cells show Nuit (#080620).
+Renders a 25×8 binary matrix as a woven-textile pattern using the
+8-Law Weave palette.  The display is TRANSPOSED: 8 rows (one per prime/Law)
+by 25 columns (one per card).  Filled cells glow with the prime's Law color;
+empty cells show Nuit (#080620).
 
 Outputs:
-  assets/weave_pattern.png       — high-res (2400x800+)
-  assets/weave_banner.png        — Twitter-card banner (3200x400)
+  assets/weave_pattern.png   — high-res section divider (~2400x800)
+  assets/weave_banner.png    — Twitter-card banner (3200x400)
 
-Uses demonstration data (seed=42, ~20% fill) to protect corpus IP.
+The matrix encodes prime-thread presence (statistical characterization) —
+which of the 8 tracked primes thread through each card's analytical network.
+This is derived data, not the corpus values themselves.
 """
 
 from __future__ import annotations
 
-import math
-import os
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +25,8 @@ from PIL import Image, ImageDraw, ImageFilter
 # ---------------------------------------------------------------------------
 # Palette
 # ---------------------------------------------------------------------------
-NUIT = (8, 6, 32)  # #080620
+NUIT = (8, 6, 32)       # #080620 — Egyptian night sky
+NUIT_DIM = (12, 10, 38) # slightly lighter for empty cells (depth)
 
 LAW_COLORS = [
     (61, 61, 107),   # 11 — Fall of Neutral Events — indaco
@@ -38,72 +39,114 @@ LAW_COLORS = [
     (245, 245, 220), # 31 — Geometric Essence 2 — avorio
 ]
 
-GRID_COLOR = (220, 201, 100)  # gold border between cells
-
-# ---------------------------------------------------------------------------
-# Demonstration matrix  (seed=42, ~20% fill rate)
-# ---------------------------------------------------------------------------
-def make_demo_matrix(rows: int = 25, cols: int = 8, fill: float = 0.20,
-                     seed: int = 42) -> np.ndarray:
-    rng = np.random.default_rng(seed)
-    return (rng.random((rows, cols)) < fill).astype(np.uint8)
+GRID_COLOR = (220, 201, 100)  # gold warp/weft lines
 
 
 # ---------------------------------------------------------------------------
-# Rendering helpers
+# Tessitura binary matrix — prime-thread presence per card
 # ---------------------------------------------------------------------------
+# Columns match LAW_COLORS order: [11, 23, 67, 17, 29, 19, 89, 31]
+# Rows: 25 cards in deck order (0-XXI + Transit + Grail + Rose)
+# Source: Appendix C — prime threading table (statistical characterization)
+#
+# 1 = prime threads through this card's analytical network
+# 0 = prime absent from this card's operations
+#
+# The 25th row (Rose/XXII) is the system card — included in the visual
+# but not part of the 24-card programmatic weight sequence.
+# fmt: off
+TESSITURA_MATRIX = np.array([
+    #                  11  23  67  17  29  19  89  31
+    [0, 0, 0, 0, 0, 0, 1, 0],  # 0    Fool
+    [0, 1, 1, 0, 0, 1, 1, 1],  # I    Magician
+    [0, 0, 1, 0, 0, 0, 0, 1],  # II   Priestess
+    [0, 1, 0, 1, 0, 0, 1, 1],  # III  Empress
+    [0, 0, 0, 0, 0, 0, 1, 0],  # IV   Emperor
+    [0, 0, 0, 0, 0, 0, 0, 1],  # V    Hierophant
+    [1, 0, 0, 0, 0, 0, 0, 0],  # VI   Lovers
+    [1, 0, 0, 0, 1, 0, 1, 0],  # VII  Chariot
+    [1, 1, 1, 1, 1, 1, 1, 1],  # VIII Justice
+    [0, 0, 0, 1, 0, 1, 1, 0],  # IX   Hermit
+    [0, 0, 0, 0, 1, 0, 1, 1],  # X    Wheel
+    [0, 0, 0, 1, 0, 0, 0, 0],  # XI   Strength
+    [1, 1, 0, 0, 0, 0, 1, 0],  # XII  Reversal
+    [0, 1, 0, 1, 0, 0, 0, 0],  # XIII Renewal
+    [1, 0, 0, 1, 1, 0, 0, 1],  # XIV  Temperance
+    [1, 1, 0, 0, 1, 0, 1, 0],  # XV   Fallen Angel
+    [1, 1, 0, 0, 0, 0, 0, 1],  # T    Transit
+    [1, 1, 0, 0, 0, 1, 0, 0],  # XVI  Tower
+    [1, 0, 0, 1, 1, 0, 0, 0],  # XVII Star
+    [0, 0, 1, 0, 0, 0, 0, 1],  # XVIII Moon
+    [0, 0, 0, 1, 0, 1, 0, 0],  # XIX  Sun
+    [0, 1, 1, 0, 0, 0, 1, 0],  # XX   Judgment
+    [1, 0, 1, 0, 0, 0, 1, 0],  # XXI  World
+    [1, 1, 0, 1, 1, 0, 0, 0],  # G    Grail
+    [0, 0, 0, 0, 1, 0, 0, 1],  # XXII Rose (system card)
+], dtype=np.uint8)
+# fmt: on
 
-def _lerp_color(c1: tuple, c2: tuple, t: float) -> tuple:
-    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
-
-def _hex_to_rgb(h: str) -> tuple:
-    h = h.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-
+# ---------------------------------------------------------------------------
+# Core renderer
+# ---------------------------------------------------------------------------
 def render_weave(
     matrix: np.ndarray,
     *,
-    cell_w: int = 96,
-    cell_h: int = 96,
-    corner_r: int = 12,
+    cell_w: int,
+    cell_h: int,
+    corner_r: int = 8,
     border: int = 2,
     glow_radius: int = 6,
     glow_intensity: float = 0.55,
-    padding_top: int = 0,
-    padding_bottom: int = 0,
-    padding_left: int = 0,
-    padding_right: int = 0,
+    padding: int = 24,
+    padding_h: int | None = None,
+    padding_v: int | None = None,
+    grid_alpha: int = 45,
+    vignette: bool = True,
+    vignette_strength: float = 0.35,
 ) -> Image.Image:
-    """Render the binary matrix as a glowing woven-textile image."""
-    rows, cols = matrix.shape
-    # total canvas size
-    img_w = padding_left + cols * (cell_w + border) + border + padding_right
-    img_h = padding_top + rows * (cell_h + border) + border + padding_bottom
+    """
+    Render the transposed binary matrix as a glowing woven-textile image.
 
-    # base layer — Nuit background
+    The matrix is transposed so that:
+      - Rows    = 8 primes (each row gets its Law color)
+      - Columns = 25 cards
+
+    padding_h / padding_v override padding for horizontal / vertical
+    independently, allowing exact pixel targeting.
+    """
+    mat = matrix.T  # (25, 8) -> (8, 25)
+    n_rows, n_cols = mat.shape
+
+    pad_x = padding_h if padding_h is not None else padding
+    pad_y = padding_v if padding_v is not None else padding
+
+    grid_w = n_cols * (cell_w + border) + border
+    grid_h = n_rows * (cell_h + border) + border
+    img_w = grid_w + 2 * pad_x
+    img_h = grid_h + 2 * pad_y
+
+    # --- Base layer: Nuit ---
     base = Image.new("RGB", (img_w, img_h), NUIT)
     draw = ImageDraw.Draw(base)
 
-    # glow accumulation layer (additive, per-cell)
+    # --- Glow accumulation ---
     glow_layer = Image.new("RGB", (img_w, img_h), (0, 0, 0))
     glow_draw = ImageDraw.Draw(glow_layer)
 
-    for r in range(rows):
-        for c in range(cols):
-            x0 = padding_left + border + c * (cell_w + border)
-            y0 = padding_top + border + r * (cell_h + border)
+    # --- Draw cells ---
+    for r in range(n_rows):
+        color = LAW_COLORS[r]
+        for c in range(n_cols):
+            x0 = pad_x + border + c * (cell_w + border)
+            y0 = pad_y + border + r * (cell_h + border)
             x1 = x0 + cell_w
             y1 = y0 + cell_h
 
-            if matrix[r, c]:
-                color = LAW_COLORS[c]
-                # draw rounded rectangle
+            if mat[r, c]:
                 draw.rounded_rectangle(
                     [x0, y0, x1, y1], radius=corner_r, fill=color
                 )
-                # glow: draw a slightly larger rounded rect on glow layer
                 expand = glow_radius
                 glow_draw.rounded_rectangle(
                     [x0 - expand, y0 - expand, x1 + expand, y1 + expand],
@@ -111,139 +154,59 @@ def render_weave(
                     fill=color,
                 )
             else:
-                # empty cell — Nuit (already background, but draw subtle
-                # inset so the grid lines are visible)
                 draw.rounded_rectangle(
-                    [x0, y0, x1, y1], radius=corner_r, fill=NUIT
+                    [x0, y0, x1, y1], radius=corner_r, fill=NUIT_DIM
                 )
 
-    # Draw grid lines (gold) on the base UNDER the cells — we actually
-    # achieve this by drawing thin gold lines in the gaps.
+    # --- Gold grid lines ---
     grid_layer = Image.new("RGBA", (img_w, img_h), (0, 0, 0, 0))
     gdraw = ImageDraw.Draw(grid_layer)
-    # horizontal lines
-    for r in range(rows + 1):
-        y = padding_top + r * (cell_h + border)
+    for r in range(n_rows + 1):
+        y = pad_y + r * (cell_h + border)
         gdraw.rectangle(
-            [padding_left, y, img_w - padding_right, y + border - 1],
-            fill=(*GRID_COLOR, 60),
+            [pad_x, y, pad_x + grid_w - 1, y + border - 1],
+            fill=(*GRID_COLOR, grid_alpha),
         )
-    # vertical lines
-    for c in range(cols + 1):
-        x = padding_left + c * (cell_w + border)
+    for c in range(n_cols + 1):
+        x = pad_x + c * (cell_w + border)
         gdraw.rectangle(
-            [x, padding_top, x + border - 1, img_h - padding_bottom],
-            fill=(*GRID_COLOR, 60),
+            [x, pad_y, x + border - 1, pad_y + grid_h - 1],
+            fill=(*GRID_COLOR, grid_alpha),
         )
 
-    # blur the glow layer
-    glow_blurred = glow_layer.filter(ImageFilter.GaussianBlur(radius=glow_radius * 2))
+    # --- Gaussian blur on glow ---
+    glow_blurred = glow_layer.filter(
+        ImageFilter.GaussianBlur(radius=glow_radius * 2.5)
+    )
 
-    # composite: base + grid + glow (screen blend)
-    # convert everything to RGBA for compositing
+    # --- Composite: base + grid + screen-blended glow ---
     result = base.convert("RGBA")
     result = Image.alpha_composite(result, grid_layer)
 
-    # screen-blend the glow
     r_arr = np.array(result.convert("RGB"), dtype=np.float32)
-    g_arr = np.array(glow_blurred, dtype=np.float32)
-    # screen: 1 - (1-a)(1-b)  — scaled by glow_intensity
-    g_arr = g_arr * glow_intensity
+    g_arr = np.array(glow_blurred, dtype=np.float32) * glow_intensity
     screened = 255.0 - (255.0 - r_arr) * (255.0 - g_arr) / 255.0
     screened = np.clip(screened, 0, 255).astype(np.uint8)
-
     final = Image.fromarray(screened, "RGB")
+
+    if vignette:
+        final = _apply_vignette(final, strength=vignette_strength)
+
     return final
 
 
-def render_banner(matrix: np.ndarray, target_w: int = 3200,
-                  target_h: int = 400) -> Image.Image:
-    """Render a wide banner version optimized for Twitter card."""
-    rows, cols = matrix.shape
-
-    # compute cell sizes to fill target dimensions
-    border = 2
-    cell_w = (target_w - (cols + 1) * border) // cols
-    cell_h = (target_h - (rows + 1) * border) // rows
-
-    # for a wide banner with 25 rows, rows will be tiny — transpose
-    # so primes are rows and cards are columns, giving 8 tall rows
-    # and 25 narrow columns
-    mat_t = matrix.T  # 8 x 25
-
-    rows_t, cols_t = mat_t.shape
-    cell_w_b = (target_w - (cols_t + 1) * border) // cols_t
-    cell_h_b = (target_h - (rows_t + 1) * border) // rows_t
-
-    # need to reassign colors: in transposed form, row index = prime index
-    # we handle this by creating a custom render
-
-    img = Image.new("RGB", (target_w, target_h), NUIT)
-    draw = ImageDraw.Draw(img)
-    glow_layer = Image.new("RGB", (target_w, target_h), (0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow_layer)
-
-    corner_r = max(4, min(cell_w_b, cell_h_b) // 8)
-    glow_radius = 4
-
-    # center the grid
-    grid_w = cols_t * (cell_w_b + border) + border
-    grid_h = rows_t * (cell_h_b + border) + border
-    off_x = (target_w - grid_w) // 2
-    off_y = (target_h - grid_h) // 2
-
-    for r in range(rows_t):
-        color = LAW_COLORS[r]
-        for c in range(cols_t):
-            x0 = off_x + border + c * (cell_w_b + border)
-            y0 = off_y + border + r * (cell_h_b + border)
-            x1 = x0 + cell_w_b
-            y1 = y0 + cell_h_b
-
-            if mat_t[r, c]:
-                draw.rounded_rectangle(
-                    [x0, y0, x1, y1], radius=corner_r, fill=color
-                )
-                expand = glow_radius
-                glow_draw.rounded_rectangle(
-                    [x0 - expand, y0 - expand, x1 + expand, y1 + expand],
-                    radius=corner_r + expand // 2,
-                    fill=color,
-                )
-            else:
-                draw.rounded_rectangle(
-                    [x0, y0, x1, y1], radius=corner_r, fill=NUIT
-                )
-
-    # grid lines
-    grid_overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
-    gdraw = ImageDraw.Draw(grid_overlay)
-    for r in range(rows_t + 1):
-        y = off_y + r * (cell_h_b + border)
-        gdraw.rectangle(
-            [off_x, y, off_x + grid_w, y + border - 1],
-            fill=(*GRID_COLOR, 50),
-        )
-    for c in range(cols_t + 1):
-        x = off_x + c * (cell_w_b + border)
-        gdraw.rectangle(
-            [x, off_y, x + border - 1, off_y + grid_h],
-            fill=(*GRID_COLOR, 50),
-        )
-
-    # glow blur + screen blend
-    glow_blurred = glow_layer.filter(
-        ImageFilter.GaussianBlur(radius=glow_radius * 2)
-    )
-
-    result = img.convert("RGBA")
-    result = Image.alpha_composite(result, grid_overlay)
-    r_arr = np.array(result.convert("RGB"), dtype=np.float32)
-    g_arr = np.array(glow_blurred, dtype=np.float32) * 0.5
-    screened = 255.0 - (255.0 - r_arr) * (255.0 - g_arr) / 255.0
-    screened = np.clip(screened, 0, 255).astype(np.uint8)
-
-    return Image.fromarray(screened, "RGB")
+def _apply_vignette(img: Image.Image, strength: float = 0.3) -> Image.Image:
+    """Radial vignette — darkens edges, keeps center bright."""
+    w, h = img.size
+    arr = np.array(img, dtype=np.float32)
+    y_grid, x_grid = np.mgrid[0:h, 0:w]
+    cx, cy = w / 2.0, h / 2.0
+    max_dist = np.sqrt(cx ** 2 + cy ** 2)
+    dist = np.sqrt((x_grid - cx) ** 2 + (y_grid - cy) ** 2) / max_dist
+    falloff = 1.0 - strength * (dist ** 1.8)
+    falloff = np.clip(falloff, 0, 1)
+    arr *= falloff[:, :, np.newaxis]
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 
 # ---------------------------------------------------------------------------
@@ -253,32 +216,42 @@ def main():
     out_dir = Path(__file__).resolve().parent.parent / "assets"
     out_dir.mkdir(exist_ok=True)
 
-    matrix = make_demo_matrix()
-    print(f"Demo matrix: {matrix.shape}, fill rate: {matrix.mean():.1%}")
-    print(matrix)
+    matrix = TESSITURA_MATRIX
+    print(f"Tessitura matrix: {matrix.shape}, fill rate: {matrix.mean():.1%}")
 
-    # --- High-res grid asset ---
+    # --- High-res section divider ---
+    # Transposed: 8 rows x 25 cols.
+    # cell 92x92 + border 2 + padding 24 => 2400 x 802
     print("\nRendering high-res weave pattern...")
-    img = render_weave(
+    pattern = render_weave(
         matrix,
-        cell_w=96,
-        cell_h=32,
+        cell_w=92,
+        cell_h=92,
+        corner_r=14,
+        border=2,
+        glow_radius=8,
+        glow_intensity=0.6,
+        padding=24,
+    )
+    path_main = out_dir / "weave_pattern.png"
+    pattern.save(str(path_main), dpi=(300, 300))
+    print(f"  Saved: {path_main}  ({pattern.width}x{pattern.height})")
+
+    # --- Twitter-card banner (exact: 3200 x 400) ---
+    # cw=124, brd=2: grid_w = 25*(124+2)+2 = 3152. pad_h = (3200-3152)//2 = 24
+    # ch=43,  brd=2: grid_h = 8*(43+2)+2   = 362.  pad_v = (400-362)//2   = 19
+    print("Rendering Twitter banner...")
+    banner = render_weave(
+        matrix,
+        cell_w=124,
+        cell_h=43,
         corner_r=8,
         border=2,
         glow_radius=5,
-        glow_intensity=0.55,
-        padding_top=20,
-        padding_bottom=20,
-        padding_left=20,
-        padding_right=20,
+        glow_intensity=0.5,
+        padding_h=24,
+        padding_v=19,
     )
-    path_main = out_dir / "weave_pattern.png"
-    img.save(str(path_main), dpi=(300, 300))
-    print(f"  Saved: {path_main}  ({img.width}x{img.height})")
-
-    # --- Wide banner ---
-    print("Rendering banner...")
-    banner = render_banner(matrix, target_w=3200, target_h=400)
     path_banner = out_dir / "weave_banner.png"
     banner.save(str(path_banner), dpi=(144, 144))
     print(f"  Saved: {path_banner}  ({banner.width}x{banner.height})")
