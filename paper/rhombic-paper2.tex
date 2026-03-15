@@ -360,7 +360,7 @@ computed as $p = (\text{number of null scores} \geq \text{observed}) /
 N_{\text{null}}$. When no null trial exceeds the observed value, we
 report $p \leq 1/N_{\text{null}}$. Hardware: Windows~11,
 Intel CPU, NVIDIA RTX 6000 Ada 48\,GB (unused---all benchmarks are
-CPU-bound). 256 tests verify library correctness. Source code and
+CPU-bound). 312 tests verify library correctness. Source code and
 raw results are publicly available (see
 Section~\ref{sec:conclusion}).
 
@@ -398,6 +398,12 @@ Scale & Distribution & Fiedler Ratio & Path Ratio \\
 8{,}000  & \textbf{corpus} & \textbf{3.18} & --- \\
 \bottomrule
 \end{tabular}
+\smallskip
+
+\noindent\footnotesize{Random and power-law distributions were not computed
+at scale 8{,}000 due to the $O(n^3)$ cost of Laplacian eigendecomposition.
+The monotonic gradient (uniform $<$ random $<$ power-law $<$ corpus) is
+established at both smaller scales.}
 \end{table}
 
 The Fiedler ratio increases monotonically with weight heterogeneity:
@@ -438,6 +444,10 @@ Scale & Distribution & Fiedler Ratio & Diffusion & Consensus \\
 8{,}000  & \textbf{corpus} & \textbf{5.47} & --- & --- \\
 \bottomrule
 \end{tabular}
+\smallskip
+
+\noindent\footnotesize{Random and power-law not computed at scale 8{,}000
+(same cost constraint as Table~\ref{tab:exp1}).}
 \end{table}
 
 Direction-based weighting more than doubles the Fiedler advantage:
@@ -516,7 +526,7 @@ The 24 corpus values are assigned to the 24 edges of the rhombic
 dodecahedron (14 vertices, 24 edges) to minimize total variation
 (TV)---the sum of absolute differences across all edges at each
 vertex. Optimization uses simulated
-annealing~\cite{kirkpatrick1983} with 20 restarts of 1{,}000
+annealing~\cite{kirkpatrick1983} with 100 restarts of 5{,}000
 iterations each.
 
 \begin{table}[H]
@@ -579,7 +589,7 @@ Distribution & Fiedler & Spectral Gap & $\lambda_{\max}$ & Distinct / 14 \\
 uniform    & 1.4384 & 0.2055 & 7.0000 & 6 \\
 random     & 0.5364 & 0.1126 & 4.7654 & 14 \\
 power\_law  & 0.1041 & 0.0371 & 2.8073 & 14 \\
-corpus     & 0.0863 & 0.0314 & 2.7547 & 14 \\
+corpus     & 0.0863 & 0.0313 & 2.7547 & 14 \\
 \midrule
 \multicolumn{5}{l}{Corpus Fiedler percentile vs.\ 10K random weights: \textbf{0.08\%}} \\
 \bottomrule
@@ -649,11 +659,11 @@ all $8! = 40{,}320$ trials ($p \approx 1/40{,}320 = 2.5 \times 10^{-5}$).
 Five of eight primes have direct divisibility hits in their assigned
 vertex star:
 \begin{itemize}
-  \item $67 \to$ vertex 7: edges $\{72, 134, 29\}$, $134 = 2 \times 67$
-  \item $29 \to$ vertex 0: edges $\{448, 435, 342\}$, $435 = 15 \times 29$
-  \item $19 \to$ vertex 4: edges $\{133, 346, 309\}$, $133 = 7 \times 19$
-  \item $17 \to$ vertex 3: edges $\{1296, 136, 64\}$, $136 = 8 \times 17$
-  \item $11 \to$ vertex 5: edges $\{78, 386, 55\}$, $55 = 5 \times 11$
+  \item $67 \to$ vertex 7: one edge $= 2 \times 67$
+  \item $29 \to$ vertex 0: one edge $= 15 \times 29$
+  \item $19 \to$ vertex 4: one edge $= 7 \times 19$
+  \item $17 \to$ vertex 3: one edge $= 8 \times 17$
+  \item $11 \to$ vertex 5: one edge $= 5 \times 11$
 \end{itemize}
 
 The identity mapping---the determined ordering from the source
@@ -806,7 +816,7 @@ Metric & Paper 1 & Paper 2 & Method \\
 \midrule
 Fiedler ratio      & 2.55$\times$ & 6.11$\times$ & Direction-weighted corpus \\
 Path advantage     & 32\%         & 61\%         & Edge-cycled corpus \\
-Consensus speedup  & 0.93$\times$ & 6.69$\times$ & Direction-weighted corpus (scale 125) \\
+Consensus speedup  & 0.93$\times$ (scale 1000) & 6.69$\times$ (scale 125) & Direction-weighted corpus \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -855,7 +865,7 @@ at lower magnitude).
 \subsection{Geometric Learning Architectures}
 
 The direction-pair structure suggests a natural application to
-low-rank adapters (LoRA) for large language models: a learnable
+low-rank adapters (LoRA;~\citealt{hu2022lora}) for large language models: a learnable
 bridge matrix with 6 channels following the RD's face-pair topology
 could add cross-rank mixing at negligible parameter cost.
 Results on this ``RhombiLoRA'' architecture are reported in the
@@ -951,13 +961,15 @@ Paper~1 is not fragile. Under the heterogeneous weights that
 characterize real systems, it is amplified.
 
 \paragraph{Availability.}
-Source code: \url{https://github.com/promptcrafted/rhombic}.\\
-Package: \url{https://pypi.org/project/rhombic/} (v0.3.0, 256 tests,
+\begin{sloppypar}
+Source code: \url{https://github.com/promptcrafted/rhombic}.
+Package: \url{https://pypi.org/project/rhombic/} (v0.3.0, 312 tests,
 PyPI trusted publishing provenance binding to commit
-\texttt{c4d2845db20457a91df2065212a5814e12d22e38}).\\
+\texttt{c4d2845}).
 Reproduction: \texttt{pip install rhombic==0.3.0 \&\& python
-scripts/run\_experiments.py} (all stochastic operations seeded with 42).\\
+scripts/run\_experiments.py} (all stochastic operations seeded with 42).
 Interactive demo: \url{https://huggingface.co/spaces/timotheospaul/rhombic}.
+\end{sloppypar}
 
 % ===================================================================
 \section*{Acknowledgments}

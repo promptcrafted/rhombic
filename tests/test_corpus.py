@@ -1,12 +1,15 @@
 """Tests for the isopsephy corpus data module."""
 
+import numpy as np
 import pytest
 from rhombic.corpus import (
     TRACKED_PRIMES, CANONICAL_EDGE_ORDER,
+    CHANNEL_PRIME_MAP, CHANNEL_TRIGRAM_MAP,
     edge_values, trump_values, names_of_power,
     prime_factors, prime_factor_set, shared_factors,
     prime_membership, weight_distributions, corpus_stats,
     corpus_available,
+    hexagram_coupling, thread_density, corpus_coupled_matrix,
 )
 
 # Skip corpus-dependent tests if private data not available
@@ -200,3 +203,88 @@ class TestCorpusStats:
         s = corpus_stats()
         assert s.tracked_prime_coverage[67] >= 1
         assert s.tracked_prime_coverage[29] >= 1
+
+
+class TestHexagramCoupling:
+    """Trigram-based coupling for corpus-coupled bridge."""
+
+    def test_symmetric(self):
+        """hexagram_coupling(i, j) == hexagram_coupling(j, i)."""
+        for i in range(6):
+            for j in range(6):
+                assert hexagram_coupling(i, j) == hexagram_coupling(j, i), \
+                    f"Asymmetric at ({i}, {j})"
+
+    def test_self_is_max(self):
+        """Self-coupling = 1.0 (all three lines match)."""
+        for i in range(6):
+            assert abs(hexagram_coupling(i, i) - 1.0) < 1e-10, \
+                f"Self-coupling of channel {i} is not 1.0"
+
+    def test_range(self):
+        """All values in [-1, 1]."""
+        for i in range(6):
+            for j in range(6):
+                v = hexagram_coupling(i, j)
+                assert -1.0 <= v <= 1.0, f"Out of range at ({i}, {j}): {v}"
+
+    def test_complementary_pair(self):
+        """Kūn (0,0,0) and Qián (1,1,1) are fully complementary → -1.0."""
+        assert abs(hexagram_coupling(0, 3) - (-1.0)) < 1e-10
+
+
+class TestThreadDensity:
+    """Thread density for corpus-coupled bridge."""
+
+    def test_range(self):
+        """Result in [0, 1]."""
+        values = [11, 67, 23, 100, 200, 300]
+        for i in range(6):
+            for j in range(6):
+                d = thread_density(i, j, values)
+                assert 0.0 <= d <= 1.0, f"Out of range at ({i}, {j}): {d}"
+
+    def test_empty_values(self):
+        """Empty values list returns 0."""
+        assert thread_density(0, 1, []) == 0.0
+
+    def test_known_value(self):
+        """Geometric mean of individual densities."""
+        # Channel 0 = prime 11, Channel 4 = prime 29
+        # Values: 11 (div by 11), 29 (div by 29), 100, 200
+        values = [11, 29, 100, 200]
+        d = thread_density(0, 4, values)
+        # d_0 = 1/4, d_4 = 1/4, sqrt(1/4 * 1/4) = 1/4
+        assert abs(d - 0.25) < 1e-10
+
+    def test_zero_when_one_prime_absent(self):
+        """If one prime divides no values, density is 0."""
+        # Channel 2 = prime 23. No values divisible by 23.
+        values = [11, 29, 100, 200]
+        d = thread_density(0, 2, values)
+        assert d == 0.0
+
+
+class TestCorpusCoupledMatrix:
+    """Full corpus-coupled bridge initialization."""
+
+    @requires_corpus
+    def test_shape(self):
+        values = edge_values()
+        M = corpus_coupled_matrix(values)
+        assert M.shape == (6, 6)
+
+    @requires_corpus
+    def test_diagonal_is_identity(self):
+        values = edge_values()
+        M = corpus_coupled_matrix(values)
+        np.testing.assert_allclose(np.diag(M), np.ones(6), atol=1e-10)
+
+    @requires_corpus
+    def test_off_diagonal_bounded(self):
+        """Off-diagonal values normalized to max |val| = 0.01."""
+        values = edge_values()
+        M = corpus_coupled_matrix(values)
+        off_diag = M.copy()
+        np.fill_diagonal(off_diag, 0.0)
+        assert np.abs(off_diag).max() <= 0.01 + 1e-10
